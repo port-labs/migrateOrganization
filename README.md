@@ -1,7 +1,8 @@
 # Migrate Organization
 This repository is for a script used to migrate Port's organizations.
+This script will migrate your Blueprints, entities, scorecards, actions and teams.
 
-During this tutorial, we will use the terms "old" and "new". Old represents the organization you are migrating from, and new represents the organizaiton you are migrating to.
+During this walkthrough, we will use the terms "old" and "new". Old represents the organization you are migrating from, and new represents the organizaiton you are migrating to.
 
 # How to use
 In order to use, run in your terminal the following commands:
