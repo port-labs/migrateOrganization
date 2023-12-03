@@ -13,10 +13,10 @@ teamError = False
 #The purpose of this script is to copy data between organization. It will copy Blueprints, Entities, Actions, Scorecards, Teams and Users.
 #Fill in the secrets or set them as environment variables
 
-PORT_OLD_CLIENT_ID = "" # or set to os.getenv("PORT_OLD_CLIENT_ID")
-PORT_OLD_CLIENT_SECRET = "" # or set to os.getenv("PORT_OLD_CLIENT_SECRET")
-PORT_NEW_CLIENT_ID = "" # or set to os.getenv("PORT_NEW_CLIENT_ID")
-PORT_NEW_CLIENT_SECRET = "" # or set to os.getenv("PORT_NEW_CLIENT_SECRET")
+PORT_OLD_CLIENT_ID = os.getenv("PORT_OLD_CLIENT_ID")
+PORT_OLD_CLIENT_SECRET = os.getenv("PORT_OLD_CLIENT_SECRET")
+PORT_NEW_CLIENT_ID = os.getenv("PORT_NEW_CLIENT_ID")
+PORT_NEW_CLIENT_SECRET = os.getenv("PORT_NEW_CLIENT_SECRET")
 
 old_credentials = { 'clientId': PORT_OLD_CLIENT_ID, 'clientSecret': PORT_OLD_CLIENT_SECRET }
 old_credentials = requests.post(f'{API_URL}/auth/access_token', json=old_credentials)
