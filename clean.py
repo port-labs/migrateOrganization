@@ -3,10 +3,10 @@ import json
 
 API_URL = 'https://api.getport.io/v1'
 
-NEW_CLIENT_ID = "" # or set to os.getenv("NEW_CLIENT_ID")
-NEW_CLIENT_SECRET = "" # or set to os.getenv("NEW_CLIENT_SECRET")
+PORT_NEW_CLIENT_ID = "" # or set to os.getenv("PORT_NEW_CLIENT_ID")
+PORT_NEW_CLIENT_SECRET = "" # or set to os.getenv("PORT_NEW_CLIENT_SECRET")
 
-new_credentials = { 'clientId': NEW_CLIENT_ID, 'clientSecret': NEW_CLIENT_SECRET }
+new_credentials = { 'clientId': PORT_NEW_CLIENT_ID, 'clientSecret': PORT_NEW_CLIENT_SECRET }
 new_credentials = requests.post(f'{API_URL}/auth/access_token', json=new_credentials)
 new_access_token = new_credentials.json()["accessToken"]
 headers = {

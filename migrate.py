@@ -13,19 +13,19 @@ teamError = False
 #The purpose of this script is to copy data between organization. It will copy Blueprints, Entities, Actions, Scorecards, Teams and Users.
 #Fill in the secrets or set them as environment variables
 
-OLD_CLIENT_ID = "" # or set to os.getenv("OLD_CLIENT_ID")
-OLD_CLIENT_SECRET = "" # or set to os.getenv("OLD_CLIENT_SECRET")
-NEW_CLIENT_ID = "" # or set to os.getenv("NEW_CLIENT_ID")
-NEW_CLIENT_SECRET = "" # or set to os.getenv("NEW_CLIENT_SECRET")
+PORT_OLD_CLIENT_ID = "" # or set to os.getenv("PORT_OLD_CLIENT_ID")
+PORT_OLD_CLIENT_SECRET = "" # or set to os.getenv("PORT_OLD_CLIENT_SECRET")
+PORT_NEW_CLIENT_ID = "" # or set to os.getenv("PORT_NEW_CLIENT_ID")
+PORT_NEW_CLIENT_SECRET = "" # or set to os.getenv("PORT_NEW_CLIENT_SECRET")
 
-old_credentials = { 'clientId': OLD_CLIENT_ID, 'clientSecret': OLD_CLIENT_SECRET }
+old_credentials = { 'clientId': PORT_OLD_CLIENT_ID, 'clientSecret': PORT_OLD_CLIENT_SECRET }
 old_credentials = requests.post(f'{API_URL}/auth/access_token', json=old_credentials)
 old_access_token = old_credentials.json()["accessToken"]
 old_headers = {
     'Authorization': f'Bearer {old_access_token}'
 }
 
-new_credentials = { 'clientId': NEW_CLIENT_ID, 'clientSecret': NEW_CLIENT_SECRET }
+new_credentials = { 'clientId': PORT_NEW_CLIENT_ID, 'clientSecret': PORT_NEW_CLIENT_SECRET }
 new_credentials = requests.post(f'{API_URL}/auth/access_token', json=new_credentials)
 new_access_token = new_credentials.json()["accessToken"]
 new_headers = {
