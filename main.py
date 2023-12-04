@@ -73,6 +73,8 @@ def postBlueprints(blueprints):
     relationsBP = copy.deepcopy(blueprints)
     for bp in cleanBP:       # send blueprint without relations and mirror properties
         print(f"posting blueprint {bp['identifier']} without relations and mirror")
+        if bp.get("teamInheritance") is not None: #handle team inheritance
+            bp.pop("teamInheritance", None)
         bp.get("relations").clear()
         bp.get("mirrorProperties").clear()
         res = requests.post(f'{API_URL}/blueprints', headers=new_headers, json=bp)
@@ -81,6 +83,8 @@ def postBlueprints(blueprints):
             error = True
     for blueprint in relationsBP:      # send blueprint with relations
         print(f"patching blueprint {blueprint['identifier']} with relations")
+        if blueprint.get("teamInheritance") is not None: #handle team inheritance
+            blueprint.pop("teamInheritance", None)
         blueprint.get("mirrorProperties").clear()
         res = requests.patch(f'{API_URL}/blueprints/{blueprint["identifier"]}', headers=new_headers, json=blueprint)
         if res.ok != True:
