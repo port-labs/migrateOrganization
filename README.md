@@ -65,8 +65,11 @@ git clone https://github.com/port-labs/migrateOrganization.git
 cd migrateOrganization
 
 pip install -r ./requirements.txt
-
-bash restore.sh
  ```
+
+ Then, place your tar.gz backup file inside the directory, and run:
+ ```
+bash restore.sh
+```
 
  This will read the backup file, and restore the data into Port.
