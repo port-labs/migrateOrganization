@@ -67,9 +67,9 @@ cd migrateOrganization
 pip install -r ./requirements.txt
  ```
 
- Then, place your tar.gz backup file inside the directory, and run:
+ Then, place your tar.gz backup file inside the directory, or edit the restore.sh file and set BACKUP_PATH to the path of the backupfile and run:
  ```
 bash restore.sh
 ```
 
- This will read the backup file, and restore the data into Port.
+ The script extract the backup files, read them and send the data into Port.
