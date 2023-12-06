@@ -1,0 +1,17 @@
+#!/bin/bash
+RUN_MODE="migrate"
+PORT_OLD_CLIENT_ID=${PORT_OLD_CLIENT_ID:-}
+PORT_OLD_CLIENT_SECRET=${PORT_OLD_CLIENT_SECRET:-}
+
+PORT_NEW_CLIENT_ID=${PORT_NEW_CLIENT_ID:-}
+PORT_NEW_CLIENT_SECRET=${PORT_NEW_CLIENT_SECRET:-}
+
+echo "Starting migration from ${PORT_OLD_CLIENT_ID} to ${PORT_NEW_CLIENT_ID}"
+
+echo "Begining backup..."
+PORT_CLIENT_ID=${PORT_OLD_CLIENT_ID} PORT_CLIENT_SECRET=${PORT_OLD_CLIENT_SECRET} IS_MIGRATE=true ./backup.sh
+
+echo "Backup complete, starting restore..."
+PORT_CLIENT_ID=${PORT_NEW_CLIENT_ID} PORT_CLIENT_SECRET=${PORT_NEW_CLIENT_SECRET} IS_MIGRATE=true ./restore.sh
+
+echo "Restore complete..."

@@ -13,24 +13,27 @@ teamError = False
 #The purpose of this script is to copy data between organization. It will copy Blueprints, Entities, Actions, Scorecards, Teams and Users.
 #Fill in the secrets or set them as environment variables
 
-PORT_OLD_CLIENT_ID = os.getenv("PORT_OLD_CLIENT_ID")
-PORT_OLD_CLIENT_SECRET = os.getenv("PORT_OLD_CLIENT_SECRET")
-PORT_NEW_CLIENT_ID = os.getenv("PORT_NEW_CLIENT_ID")
-PORT_NEW_CLIENT_SECRET = os.getenv("PORT_NEW_CLIENT_SECRET")
+PORT_OLD_CLIENT_ID = os.getenv("PORT_OLD_CLIENT_ID", "")
+PORT_OLD_CLIENT_SECRET = os.getenv("PORT_OLD_CLIENT_SECRET", "")
+PORT_NEW_CLIENT_ID = os.getenv("PORT_NEW_CLIENT_ID", "")
+PORT_NEW_CLIENT_SECRET = os.getenv("PORT_NEW_CLIENT_SECRET", "")
+RUN_MODE = os.getenv("RUN_MODE", "backup")
 
-old_credentials = { 'clientId': PORT_OLD_CLIENT_ID, 'clientSecret': PORT_OLD_CLIENT_SECRET }
-old_credentials = requests.post(f'{API_URL}/auth/access_token', json=old_credentials)
-old_access_token = old_credentials.json()["accessToken"]
-old_headers = {
-    'Authorization': f'Bearer {old_access_token}'
-}
+if PORT_OLD_CLIENT_ID != "" or PORT_OLD_CLIENT_SECRET != "":
+    old_credentials = { 'clientId': PORT_OLD_CLIENT_ID, 'clientSecret': PORT_OLD_CLIENT_SECRET }
+    old_credentials = requests.post(f'{API_URL}/auth/access_token', json=old_credentials)
+    old_access_token = old_credentials.json()["accessToken"]
+    old_headers = {
+        'Authorization': f'Bearer {old_access_token}'
+    }
 
-new_credentials = { 'clientId': PORT_NEW_CLIENT_ID, 'clientSecret': PORT_NEW_CLIENT_SECRET }
-new_credentials = requests.post(f'{API_URL}/auth/access_token', json=new_credentials)
-new_access_token = new_credentials.json()["accessToken"]
-new_headers = {
-    'Authorization': f'Bearer {new_access_token}'
-}
+if PORT_NEW_CLIENT_ID != "" or PORT_NEW_CLIENT_SECRET != "":
+    new_credentials = { 'clientId': PORT_NEW_CLIENT_ID, 'clientSecret': PORT_NEW_CLIENT_SECRET }
+    new_credentials = requests.post(f'{API_URL}/auth/access_token', json=new_credentials)
+    new_access_token = new_credentials.json()["accessToken"]
+    new_headers = {
+        'Authorization': f'Bearer {new_access_token}'
+    }
 
 
 def getBlueprints():
@@ -57,13 +60,21 @@ def getTeams():
     resp = res.json()["teams"]
     return resp
 
+def getEntites(blueprint):
+    print(f"Getting entities for {blueprint}")
+    res = requests.get(f'{API_URL}/blueprints/{blueprint}/entities', headers=old_headers)
+    resp = res.json()["entities"]
+    return resp
+
 def postBlueprints(blueprints):
     global error
     print("Posting blueprints")
     cleanBP = copy.deepcopy(blueprints)
     relationsBP = copy.deepcopy(blueprints)
     for bp in cleanBP:       # send blueprint without relations and mirror properties
-        print(f"posting blueprint {bp['identifier']}")
+        print(f"posting blueprint {bp['identifier']} without relations and mirror")
+        if bp.get("teamInheritance") is not None: #handle team inheritance
+            bp.pop("teamInheritance", None)
         bp.get("relations").clear()
         bp.get("mirrorProperties").clear()
         res = requests.post(f'{API_URL}/blueprints', headers=new_headers, json=bp)
@@ -72,6 +83,8 @@ def postBlueprints(blueprints):
             error = True
     for blueprint in relationsBP:      # send blueprint with relations
         print(f"patching blueprint {blueprint['identifier']} with relations")
+        if blueprint.get("teamInheritance") is not None: #handle team inheritance
+            blueprint.pop("teamInheritance", None)
         blueprint.get("mirrorProperties").clear()
         res = requests.patch(f'{API_URL}/blueprints/{blueprint["identifier"]}', headers=new_headers, json=blueprint)
         if res.ok != True:
@@ -84,16 +97,14 @@ def postBlueprints(blueprints):
             print("error patching blueprint:" + json.dumps(res.json()))
             error = True
 
-def postEntities(blueprints):
+def postEntities(entities):
     global error
-    for blueprint in blueprints:
-        print(f"getting entities for blueprint {blueprint['identifier']}")
-        res = requests.get(f'{API_URL}/blueprints/{blueprint["identifier"]}/entities', headers=old_headers)
-        resp = res.json()["entities"]
-        for entity in resp:
+    for blueprint in entities:
+        print(f"posting entities for blueprint {blueprint}")
+        for entity in entities[blueprint]:
             if entity["icon"] is None:
                 entity.pop("icon", None)
-            res = requests.post(f'{API_URL}/blueprints/{blueprint["identifier"]}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=false', headers=new_headers, json=entity)
+            res = requests.post(f'{API_URL}/blueprints/{blueprint}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=false', headers=new_headers, json=entity)
             if res.ok != True:
                 print("error posting entity:" + json.dumps(res.json()))
                 error = True
@@ -143,16 +154,44 @@ def postTeams(teams):
 
 
 def main():
-    blueprints = getBlueprints()
-    postBlueprints(blueprints)
-    scorecards = getScorecards()
-    postScorecards(scorecards)
-    actions = getActions()
-    postActions(actions)
-    teams = getTeams()
-    postTeams(teams)
-    postEntities(blueprints)
+    if RUN_MODE == "backup" or RUN_MODE == "migrate":
+        blueprints = getBlueprints()
+        scorecards = getScorecards()
+        actions = getActions()
+        teams = getTeams()
+        entities = {}
+        if RUN_MODE == "backup":
+            for blueprint in blueprints:
+                bp_id = blueprint["identifier"]
+                entities[bp_id] = getEntites(bp_id)
+            with open('bk-blueprints.json', 'w') as outfile:
+                json.dump(blueprints, outfile)
+            with open('bk-scorecards.json', 'w') as outfile:
+                json.dump(scorecards, outfile)
+            with open('bk-actions.json', 'w') as outfile:
+                json.dump(actions, outfile)
+            with open('bk-teams.json', 'w') as outfile:
+                json.dump(teams, outfile)
+            with open('bk-entities.json', 'w') as outfile:
+                json.dump(entities, outfile)
 
+    if RUN_MODE == "migrate" or RUN_MODE == "restore":
+        if RUN_MODE == "restore":
+            with open('bk-blueprints.json') as json_file:
+                blueprints = json.load(json_file)
+            with open('bk-scorecards.json') as json_file:
+                scorecards = json.load(json_file)
+            with open('bk-actions.json') as json_file:
+                actions = json.load(json_file)
+            with open('bk-teams.json') as json_file:
+                teams = json.load(json_file)
+            with open('bk-entities.json') as json_file:
+                entities = json.load(json_file)
+        postBlueprints(blueprints)
+        postScorecards(scorecards)
+        postActions(actions)
+        postTeams(teams)
+        postEntities(entities)
     if error:
         print("Errors occured during migration, please check logs")
     elif teamError:
