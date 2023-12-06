@@ -36,7 +36,7 @@ List of required variables for the script (Port's organization credentials):
  ```
 
  # How to Backup
- In order to backup your data, run the following commands in your terminal (remember to insert the Port's credentials):
+ In order to backup your data, run the following commands in your terminal (remember to insert Port's credentials):
 
  ```
 export PORT_CLIENT_ID=<ENTER PORT CLIENT ID>
