@@ -36,7 +36,18 @@ List of required variables for the script (Port's organization credentials):
  ```
 
  # How to Backup
- In order to backup your data, run the following commands in your terminal (remember to insert Port's credentials):
+ If you're interested in pushing the backfile to an S3 Bucket, first run the following commands in your terminal (exporting AWS credentials):
+
+```
+# export AWS_ACCESS_KEY_ID="your-access-key-id"
+# export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
+# export AWS_DEFAULT_REGION="your-default-region"
+# export S3_BUCKET_NAME="your-s3-bucket-name"
+# export S3_BUCKET_REGION="your-s3-bucket-region"
+# export S3_SAVE_PATH="your-s3-save-path"
+```
+
+ Then, run the following commands in your terminal (remember to insert Port's credentials):
 
  ```
 export PORT_CLIENT_ID=<ENTER PORT CLIENT ID>
@@ -54,7 +65,18 @@ bash backup.sh
  This will create a tar.gz file in the directory, which will contain the data from your Port's organization
 
  # How to restore
- In order to restore data from a backup file, run the following commands in your terminal  (remember to insert the Port's credentials):
+ If you want to restore the backup file from your S3 Bucket, first run the following commands (export your AWS credentials):
+
+```
+export AWS_ACCESS_KEY_ID="your-access-key-id"
+export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
+export AWS_DEFAULT_REGION="your-default-region"
+export S3_BUCKET_NAME="your-s3-bucket-name"
+export S3_BUCKET_REGION="your-s3-bucket-region"
+export S3_SAVE_PATH="your-s3-save-path"
+```
+
+Then, run the following commands in your terminal (remember to insert Port's credentials):
 
  ```
 export PORT_CLIENT_ID=<ENTER PORT CLIENT ID>
