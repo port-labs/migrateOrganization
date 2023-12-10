@@ -36,6 +36,8 @@ List of required variables for the script (Port's organization credentials):
  ```
 
  # How to Backup
+ The script only support filenames named `backup-(timestamp).tar.gz`. For the script to work, do not change the name of the backup file.
+
  If you're interested in pushing the backfile to an S3 Bucket, first run the following commands in your terminal (exporting AWS credentials):
 
 ```
@@ -65,6 +67,8 @@ bash backup.sh
  This will create a tar.gz file in the directory, which will contain the data from your Port's organization
 
  # How to restore
+ The script only support filenames named `backup-(timestamp).tar.gz`. For the script to work, do not change the name of the backup file.
+
  If you want to restore the backup file from your S3 Bucket, first run the following commands (export your AWS credentials):
 
 ```
@@ -73,7 +77,7 @@ export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
 export AWS_DEFAULT_REGION="your-default-region"
 export S3_BUCKET_NAME="your-s3-bucket-name"
 export S3_BUCKET_REGION="your-s3-bucket-region"
-export S3_SAVE_PATH="your-s3-save-path"
+export S3_SAVE_PATH="your-s3-save-path-including-file-name"
 ```
 
 Then, run the following commands in your terminal (remember to insert Port's credentials):
