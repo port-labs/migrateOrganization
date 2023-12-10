@@ -25,7 +25,8 @@ if [ $IS_MIGRATE != true ] ; then
     rm -rf ./bk*
     if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ] && [ -n "$AWS_DEFAULT_REGION" ] && [ -n "$S3_BUCKET_NAME" ] && [ -n "$S3_BUCKET_REGION" ] && [ -n "$S3_SAVE_PATH" ]; then
         # Upload the backup to S3 if it's a backup
-        aws s3 cp ./backup.tar.gz s3://$S3_BUCKET_NAME/$S3_SAVE_PATH/ --region $S3_BUCKET_REGION
+        aws s3 cp ./backup.tar.gz s3://$S3_BUCKET_NAME/$S3_SAVE_PATH/backup-$(date+%s).tar.gz  --region $S3_BUCKET_REGION
+        echo "Backup uploaded to S3, path: s3://$S3_BUCKET_NAME/$S3_SAVE_PATH/backup-$(date+%s).tar.gz"
     fi
     # Optionally, you can remove the local backup file after uploading
     rm -f ./backup.tar.gz
