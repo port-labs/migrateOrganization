@@ -6,6 +6,7 @@
 # export AWS_DEFAULT_REGION="your-default-region"
 # export S3_BUCKET_NAME="your-s3-bucket-name"
 # export S3_BUCKET_REGION="your-s3-bucket-region"
+# export S3_SAVE_PATH="your-s3-save-path"
 
 RUN_MODE="restore"
 BACKUP_PATH=${BACKUP_PATH:-./backup.tar.gz}
@@ -15,11 +16,11 @@ PORT_CLIENT_ID=${PORT_CLIENT_ID:-}
 
 
 if [ $IS_MIGRATE != true ] ; then
-    if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ] && [ -n "$AWS_DEFAULT_REGION" ]; then
+    if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ] && [ -n "$AWS_DEFAULT_REGION" ] && [ -n "$S3_BUCKET_NAME" ] && [ -n "$S3_BUCKET_REGION" ] && [ -n "$S3_SAVE_PATH" ]; then
         aws s3 cp s3://$S3_BUCKET_NAME/$BACKUP_PATH . --region $S3_BUCKET_REGION
-    fi
     else
         tar -xvzf ${BACKUP_PATH} ./bk*
+    fi
 fi
 
 export PORT_NEW_CLIENT_ID=${PORT_CLIENT_ID}
