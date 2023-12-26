@@ -2,6 +2,7 @@ import json
 import requests
 import os
 import copy
+import pandas as pd
  
 API_URL = 'https://api.getport.io/v1'
 
@@ -161,32 +162,55 @@ def main():
         teams = getTeams()
         entities = {}
         if RUN_MODE == "backup":
-            for blueprint in blueprints:
-                bp_id = blueprint["identifier"]
-                entities[bp_id] = getEntites(bp_id)
-            with open('bk-blueprints.json', 'w') as outfile:
-                json.dump(blueprints, outfile)
-            with open('bk-scorecards.json', 'w') as outfile:
-                json.dump(scorecards, outfile)
-            with open('bk-actions.json', 'w') as outfile:
-                json.dump(actions, outfile)
-            with open('bk-teams.json', 'w') as outfile:
-                json.dump(teams, outfile)
-            with open('bk-entities.json', 'w') as outfile:
-                json.dump(entities, outfile)
+            if format == "tar":
+                for blueprint in blueprints:
+                    bp_id = blueprint["identifier"]
+                    entities[bp_id] = getEntites(bp_id)
+                with open('bk-blueprints.json', 'w') as outfile:
+                    json.dump(blueprints, outfile)
+                with open('bk-scorecards.json', 'w') as outfile:
+                    json.dump(scorecards, outfile)
+                with open('bk-actions.json', 'w') as outfile:
+                    json.dump(actions, outfile)
+                with open('bk-teams.json', 'w') as outfile:
+                    json.dump(teams, outfile)
+                with open('bk-entities.json', 'w') as outfile:
+                  json.dump(entities, outfile)
+            else:
+                # Convert each JSON object to a DataFrame
+                df_blueprints = pd.DataFrame(blueprints)
+                df_scorecards = pd.DataFrame(scorecards)
+                df_actions = pd.DataFrame(actions)
+                df_teams = pd.DataFrame(teams)
+                df_entities = pd.DataFrame(entities.values(), index=entities.keys())  # Assuming entities is a dict
+
+                # Create an Excel writer object and write each DataFrame to a different sheet
+                with pd.ExcelWriter('bk-data.xlsx') as writer:
+                    df_blueprints.to_excel(writer, sheet_name='Blueprints', index=False)
+                    df_scorecards.to_excel(writer, sheet_name='Scorecards', index=False)
+                    df_actions.to_excel(writer, sheet_name='Actions', index=False)
+                    df_teams.to_excel(writer, sheet_name='Teams', index=False)
+                    df_entities.to_excel(writer, sheet_name='Entities', index=False)
 
     if RUN_MODE == "migrate" or RUN_MODE == "restore":
         if RUN_MODE == "restore":
-            with open('bk-blueprints.json') as json_file:
-                blueprints = json.load(json_file)
-            with open('bk-scorecards.json') as json_file:
-                scorecards = json.load(json_file)
-            with open('bk-actions.json') as json_file:
-                actions = json.load(json_file)
-            with open('bk-teams.json') as json_file:
-                teams = json.load(json_file)
-            with open('bk-entities.json') as json_file:
-                entities = json.load(json_file)
+            if format == "tar":
+                with open('bk-blueprints.json') as json_file:
+                    blueprints = json.load(json_file)
+                with open('bk-scorecards.json') as json_file:
+                    scorecards = json.load(json_file)
+                with open('bk-actions.json') as json_file:
+                    actions = json.load(json_file)
+                with open('bk-teams.json') as json_file:
+                    teams = json.load(json_file)
+                with open('bk-entities.json') as json_file:
+                    entities = json.load(json_file)
+            else:
+                blueprints = pd.read_excel('bk-data.xlsx', sheet_name='Blueprints').to_dict(orient='records')
+                scorecards = pd.read_excel('bk-data.xlsx', sheet_name='Scorecards').to_dict(orient='records')
+                actions = pd.read_excel('bk-data.xlsx', sheet_name='Actions').to_dict(orient='records')
+                teams = pd.read_excel('bk-data.xlsx', sheet_name='Teams').to_dict(orient='records')
+                entities = pd.read_excel('bk-data.xlsx', sheet_name='Entities').to_dict(orient='index')
         postBlueprints(blueprints)
         postScorecards(scorecards)
         postActions(actions)
