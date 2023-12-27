@@ -10,6 +10,15 @@ global error
 error = False
 global teamError
 teamError = False
+FORMAT = os.getenv("MIGRATION_FORMAT", "tar") #Format = tar or excel
+
+#Selective format = In case you are interested in only backing up specific blueprints, specify them here. If the array is empty, all blueprints will be backed up.
+
+specificBlueprints = []
+
+SPECIFIC = False
+if specificBlueprints:
+    SPECIFIC = True
 
 #The purpose of this script is to copy data between organization. It will copy Blueprints, Entities, Actions, Scorecards, Teams and Users.
 #Fill in the secrets or set them as environment variables
@@ -36,6 +45,14 @@ if PORT_NEW_CLIENT_ID != "" or PORT_NEW_CLIENT_SECRET != "":
         'Authorization': f'Bearer {new_access_token}'
     }
 
+def getBlueprints(blueprints):
+    returnBlueprints = []
+    for blueprint in blueprints:
+        print(f"Getting blueprint {blueprint}")
+        res = requests.get(f'{API_URL}/blueprints/{blueprint}', headers=old_headers)
+        resp = res.json()
+        returnBlueprints.append(resp["blueprint"])
+    return returnBlueprints
 
 def getBlueprints():
     print("Getting blueprints")
@@ -156,13 +173,16 @@ def postTeams(teams):
 
 def main():
     if RUN_MODE == "backup" or RUN_MODE == "migrate":
-        blueprints = getBlueprints()
+        if SPECIFIC: #check if we are backing up specific blueprints
+            blueprints = getBlueprints(specificBlueprints)
+        else: #if not, get all blueprints
+            blueprints = getBlueprints()
         scorecards = getScorecards()
         actions = getActions()
         teams = getTeams()
         entities = {}
         if RUN_MODE == "backup":
-            if format == "tar":
+            if FORMAT == "tar": #if we are backing up to tar, dump the jsons to files
                 for blueprint in blueprints:
                     bp_id = blueprint["identifier"]
                     entities[bp_id] = getEntites(bp_id)
@@ -182,8 +202,7 @@ def main():
                 df_scorecards = pd.DataFrame(scorecards)
                 df_actions = pd.DataFrame(actions)
                 df_teams = pd.DataFrame(teams)
-                df_entities = pd.DataFrame(entities.values(), index=entities.keys())  # Assuming entities is a dict
-
+                df_entities = pd.DataFrame(entities.values(), index=entities.keys())
                 # Create an Excel writer object and write each DataFrame to a different sheet
                 with pd.ExcelWriter('bk-data.xlsx') as writer:
                     df_blueprints.to_excel(writer, sheet_name='Blueprints', index=False)
@@ -194,7 +213,7 @@ def main():
 
     if RUN_MODE == "migrate" or RUN_MODE == "restore":
         if RUN_MODE == "restore":
-            if format == "tar":
+            if FORMAT == "tar": #if we are restoring from tar, load the data from JSON files
                 with open('bk-blueprints.json') as json_file:
                     blueprints = json.load(json_file)
                 with open('bk-scorecards.json') as json_file:
@@ -205,7 +224,7 @@ def main():
                     teams = json.load(json_file)
                 with open('bk-entities.json') as json_file:
                     entities = json.load(json_file)
-            else:
+            else: #load the data from excel spreadsheet
                 blueprints = pd.read_excel('bk-data.xlsx', sheet_name='Blueprints').to_dict(orient='records')
                 scorecards = pd.read_excel('bk-data.xlsx', sheet_name='Scorecards').to_dict(orient='records')
                 actions = pd.read_excel('bk-data.xlsx', sheet_name='Actions').to_dict(orient='records')

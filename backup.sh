@@ -13,7 +13,7 @@ IS_MIGRATE=${IS_MIGRATE:-false}
 PORT_CLIENT_ID=${PORT_CLIENT_ID:-}
 
 
-
+FORMAT=${MIGRATION_FORMAT:-"tar"}
 export PORT_OLD_CLIENT_ID=${PORT_CLIENT_ID}
 export PORT_OLD_CLIENT_SECRET=${PORT_CLIENT_SECRET}
 export RUN_MODE=$RUN_MODE
@@ -21,6 +21,13 @@ python3 main.py
 
 formatted_time=$(date +%Y-%m-%dT%H-%M-%S)
 if [ $IS_MIGRATE != true ] ; then
+    if [ $FORMAT = "excel"] ; then
+        if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ] && [ -n "$AWS_DEFAULT_REGION" ] && [ -n "$S3_BUCKET_NAME" ] && [ -n "$S3_BUCKET_REGION" ] && [ -n "$S3_SAVE_PATH" ]; then
+        # Upload the backup to S3 if it's a backup
+        aws s3 cp ./bk-data.xlsx s3://$S3_BUCKET_NAME/$S3_SAVE_PATH/backup-$(formatted_time)  --region $S3_BUCKET_REGION
+        echo "Backup uploaded to S3, path: s3://$S3_BUCKET_NAME/$S3_SAVE_PATH/backup-$(formatted_time).xslx"
+        fi
+    else
     tar -czf ./backup-$(formatted_time).tar.gz ./bk*
     rm -rf ./bk*
     if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ] && [ -n "$AWS_DEFAULT_REGION" ] && [ -n "$S3_BUCKET_NAME" ] && [ -n "$S3_BUCKET_REGION" ] && [ -n "$S3_SAVE_PATH" ]; then
@@ -30,4 +37,5 @@ if [ $IS_MIGRATE != true ] ; then
     fi
     # Optionally, you can remove the local backup file after uploading
     # rm -f ./backup-*.tar.gz
+    fi
 fi
