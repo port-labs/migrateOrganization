@@ -16,6 +16,7 @@ FORMAT = os.getenv("MIGRATION_FORMAT", "tar") #Format = tar or excel
 
 specificBlueprints = []
 
+
 SPECIFIC = False
 if specificBlueprints:
     SPECIFIC = True
