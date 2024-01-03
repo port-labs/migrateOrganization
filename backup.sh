@@ -24,8 +24,8 @@ if [ $IS_MIGRATE != true ] ; then
     if [ $FORMAT = "excel"] ; then
         if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ] && [ -n "$AWS_DEFAULT_REGION" ] && [ -n "$S3_BUCKET_NAME" ] && [ -n "$S3_BUCKET_REGION" ] && [ -n "$S3_SAVE_PATH" ]; then
         # Upload the backup to S3 if it's a backup
-        aws s3 cp ./bk-data.xlsx s3://$S3_BUCKET_NAME/$S3_SAVE_PATH/backup-$(formatted_time)  --region $S3_BUCKET_REGION
-        echo "Backup uploaded to S3, path: s3://$S3_BUCKET_NAME/$S3_SAVE_PATH/backup-$(formatted_time).xslx"
+        aws s3 cp ./bk-data.xlsx s3://$S3_BUCKET_NAME/$S3_SAVE_PATH/backup-$(formatted_time).xlsx  --region $S3_BUCKET_REGION
+        echo "Backup uploaded to S3, path: s3://$S3_BUCKET_NAME/$S3_SAVE_PATH/backup-$(formatted_time).xlsx"
         fi
     else
     tar -czf ./backup-$(formatted_time).tar.gz ./bk*
