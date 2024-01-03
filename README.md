@@ -36,6 +36,8 @@ List of required variables for the script (Port's organization credentials):
  ```
 
  # How to Backup
+ In order to run a partial backup, insert the blueprints identifiers into the `specificBlueprints` array at the beginning of `main.py` file.
+
  The script only support filenames named `backup-(timestamp).tar.gz`. For the script to work, do not change the name of the backup file.
 
  If you're interested in pushing the backfile to an S3 Bucket, first run the following commands in your terminal (exporting AWS credentials):

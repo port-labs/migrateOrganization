@@ -12,10 +12,12 @@ global teamError
 teamError = False
 FORMAT = os.getenv("MIGRATION_FORMAT", "tar") #Format = tar or excel
 
-#Selective format = In case you are interested in only backing up specific blueprints, specify them here. If the array is empty, all blueprints will be backed up.
+#Selective format = In case you are interested in only backing up specific blueprints, specify them here by adding their identifiers to the array. If the array is empty, all blueprints will be backed up.
+# Example format: 
+# specificBlueprints = ["blueprint1", "blueprint2"]
+#
 
 specificBlueprints = []
-
 
 SPECIFIC = False
 if specificBlueprints:
@@ -61,11 +63,29 @@ def getBlueprints():
     resp = res.json()["blueprints"]
     return resp
 
+def getScorecards(blueprints):
+    returnScorecards = []
+    for blueprint in blueprints:
+        print(f"Getting scorecards for blueprint {blueprint}")
+        res = requests.get(f'{API_URL}/blueprints/{blueprint}/scorecards', headers=old_headers)
+        resp = res.json()["scorecards"]
+        returnScorecards.append(resp)
+    return returnScorecards
+
 def getScorecards():
     print("Getting scorecards")
     res = requests.get(f'{API_URL}/scorecards', headers=old_headers)
     resp = res.json()["scorecards"]
     return resp
+
+def getActions(blueprints):
+    returnActions = []
+    for blueprint in blueprints:
+        print(f"Getting actions for blueprint {blueprint}")
+        res = requests.get(f'{API_URL}/blueprints/{blueprint}/actions', headers=old_headers)
+        resp = res.json()["actions"]
+        returnActions.append(resp)
+    return returnActions
 
 def getActions():
     print("Getting actions")
@@ -176,17 +196,24 @@ def main():
     if RUN_MODE == "backup" or RUN_MODE == "migrate":
         if SPECIFIC: #check if we are backing up specific blueprints
             blueprints = getBlueprints(specificBlueprints)
+            scorecards = getScorecards(specificBlueprints)
+            actions = getActions(specificBlueprints)
         else: #if not, get all blueprints
             blueprints = getBlueprints()
-        scorecards = getScorecards()
-        actions = getActions()
+            scorecards = getScorecards()
+            actions = getActions()
         teams = getTeams()
         entities = {}
         if RUN_MODE == "backup":
-            if FORMAT == "tar": #if we are backing up to tar, dump the jsons to files
+            if SPECIFIC:
+                for blueprint in specificBlueprints:
+                    bp_id = blueprint
+                    entities[bp_id] = getEntites(bp_id)
+            else: 
                 for blueprint in blueprints:
                     bp_id = blueprint["identifier"]
                     entities[bp_id] = getEntites(bp_id)
+            if FORMAT == "tar": #if we are backing up to tar, dump the jsons to files
                 with open('bk-blueprints.json', 'w') as outfile:
                     json.dump(blueprints, outfile)
                 with open('bk-scorecards.json', 'w') as outfile:
