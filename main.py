@@ -17,7 +17,7 @@ FORMAT = os.getenv("MIGRATION_FORMAT", "tar") #Format = tar or excel
 # specificBlueprints = ["blueprint1", "blueprint2"]
 #
 
-specificBlueprints = []
+specificBlueprints = ["repository", "domain", "environmenttest"]
 
 SPECIFIC = False
 if specificBlueprints:
@@ -48,7 +48,7 @@ if PORT_NEW_CLIENT_ID != "" or PORT_NEW_CLIENT_SECRET != "":
         'Authorization': f'Bearer {new_access_token}'
     }
 
-def getBlueprints(blueprints):
+def getSpecificBlueprints(blueprints):
     returnBlueprints = []
     for blueprint in blueprints:
         print(f"Getting blueprint {blueprint}")
@@ -63,13 +63,13 @@ def getBlueprints():
     resp = res.json()["blueprints"]
     return resp
 
-def getScorecards(blueprints):
+def getSpecificScorecards(blueprints):
     returnScorecards = []
     for blueprint in blueprints:
         print(f"Getting scorecards for blueprint {blueprint}")
         res = requests.get(f'{API_URL}/blueprints/{blueprint}/scorecards', headers=old_headers)
         resp = res.json()["scorecards"]
-        returnScorecards.append(resp)
+        returnScorecards += resp
     return returnScorecards
 
 def getScorecards():
@@ -78,13 +78,13 @@ def getScorecards():
     resp = res.json()["scorecards"]
     return resp
 
-def getActions(blueprints):
+def getSpecificActions(blueprints):
     returnActions = []
     for blueprint in blueprints:
         print(f"Getting actions for blueprint {blueprint}")
         res = requests.get(f'{API_URL}/blueprints/{blueprint}/actions', headers=old_headers)
         resp = res.json()["actions"]
-        returnActions.append(resp)
+        returnActions += resp
     return returnActions
 
 def getActions():
@@ -111,9 +111,10 @@ def postBlueprints(blueprints):
     cleanBP = copy.deepcopy(blueprints)
     relationsBP = copy.deepcopy(blueprints)
     for bp in cleanBP:       # send blueprint without relations and mirror properties
-        print(f"posting blueprint {bp['identifier']} without relations and mirror")
+        print(f"posting blueprint {bp['identifier']} without relations, mirrors and aggregations")
         if bp.get("teamInheritance") is not None: #handle team inheritance
             bp.pop("teamInheritance", None)
+        bp.get("aggregationProperties").clear()
         bp.get("relations").clear()
         bp.get("mirrorProperties").clear()
         res = requests.post(f'{API_URL}/blueprints', headers=new_headers, json=bp)
@@ -125,6 +126,7 @@ def postBlueprints(blueprints):
         if blueprint.get("teamInheritance") is not None: #handle team inheritance
             blueprint.pop("teamInheritance", None)
         blueprint.get("mirrorProperties").clear()
+        blueprint.get("aggregationProperties").clear()
         res = requests.patch(f'{API_URL}/blueprints/{blueprint["identifier"]}', headers=new_headers, json=blueprint)
         if res.ok != True:
             print("error patching blueprint:" + json.dumps(res.json()))
@@ -143,7 +145,7 @@ def postEntities(entities):
         for entity in entities[blueprint]:
             if entity["icon"] is None:
                 entity.pop("icon", None)
-            res = requests.post(f'{API_URL}/blueprints/{blueprint}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=false', headers=new_headers, json=entity)
+            res = requests.post(f'{API_URL}/blueprints/{blueprint}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true', headers=new_headers, json=entity)
             if res.ok != True:
                 print("error posting entity:" + json.dumps(res.json()))
                 error = True
@@ -152,7 +154,6 @@ def postScorecards(scorecards):
     global error
     print("Posting scorecards")
     for scorecard in scorecards:
-        print(f"posting scorecard {scorecard['identifier']}")
         scorecard.pop("id", None)
         scorecard.pop("createdAt", None)
         scorecard.pop("updatedAt", None)
@@ -195,24 +196,19 @@ def postTeams(teams):
 def main():
     if RUN_MODE == "backup" or RUN_MODE == "migrate":
         if SPECIFIC: #check if we are backing up specific blueprints
-            blueprints = getBlueprints(specificBlueprints)
-            scorecards = getScorecards(specificBlueprints)
-            actions = getActions(specificBlueprints)
+            blueprints = getSpecificBlueprints(specificBlueprints)
+            scorecards = getSpecificScorecards(specificBlueprints)
+            actions = getSpecificActions(specificBlueprints)
         else: #if not, get all blueprints
             blueprints = getBlueprints()
             scorecards = getScorecards()
             actions = getActions()
         teams = getTeams()
         entities = {}
+        for blueprint in blueprints:
+            bp_id = blueprint["identifier"]
+            entities[bp_id] = getEntites(bp_id)
         if RUN_MODE == "backup":
-            if SPECIFIC:
-                for blueprint in specificBlueprints:
-                    bp_id = blueprint
-                    entities[bp_id] = getEntites(bp_id)
-            else: 
-                for blueprint in blueprints:
-                    bp_id = blueprint["identifier"]
-                    entities[bp_id] = getEntites(bp_id)
             if FORMAT == "tar": #if we are backing up to tar, dump the jsons to files
                 with open('bk-blueprints.json', 'w') as outfile:
                     json.dump(blueprints, outfile)

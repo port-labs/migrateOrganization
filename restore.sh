@@ -27,7 +27,9 @@ if [ $IS_MIGRATE != true ] ; then
         fi
     else
         if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ] && [ -n "$AWS_DEFAULT_REGION" ] && [ -n "$S3_BUCKET_NAME" ] && [ -n "$S3_BUCKET_REGION" ] && [ -n "$BACKUP_FILE_PATH" ] ; then
-            aws s3 cp s3://$S3_BUCKET_NAME/$BACKUP_FILE_PATH . --region $S3_BUCKET_REGION        
+            aws s3 cp s3://$S3_BUCKET_NAME/$BACKUP_FILE_PATH . --region $S3_BUCKET_REGION
+        fi
+    fi
 fi
 
 export PORT_NEW_CLIENT_ID=${PORT_CLIENT_ID}
