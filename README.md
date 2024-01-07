@@ -51,7 +51,6 @@ List of required variables for the script (Port's organization credentials):
 ```
 export AWS_ACCESS_KEY_ID="your-access-key-id"
 export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
-export AWS_DEFAULT_REGION="your-default-region"
 export S3_BUCKET_REGION="your-s3-bucket-region"
 export S3_SAVE_PATH="your-s3-save-path-including-bucket-name"
 ```
@@ -87,7 +86,6 @@ bash backup.sh
 ```
 export AWS_ACCESS_KEY_ID="your-access-key-id"
 export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
-export AWS_DEFAULT_REGION="your-default-region"
 export S3_BUCKET_REGION="your-s3-bucket-region"
 export BACKUP_FILE_PATH="your-backup-path-including-bucket-name" 
 export FILE_NAME="your-file-name"
@@ -97,7 +95,7 @@ Then, run the following commands in your terminal (remember to insert Port's cre
 
  ```
 export PORT_CLIENT_ID=<ENTER PORT CLIENT ID>
-export PORT_CLIENT_SECRET= <ENTER PORT CLIENT SECRET>
+export PORT_CLIENT_SECRET=<ENTER PORT CLIENT SECRET>
 
 git clone https://github.com/port-labs/migrateOrganization.git
 
