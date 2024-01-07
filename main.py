@@ -2,6 +2,7 @@ import json
 import requests
 import os
 import copy
+import pandas as pd
  
 API_URL = 'https://api.getport.io/v1'
 
@@ -9,6 +10,17 @@ global error
 error = False
 global teamError
 teamError = False
+FORMAT = os.getenv("MIGRATION_FORMAT", "tar") #Format = tar or excel
+
+#Selective format = In case you are interested in only backing up specific blueprints, specify them here by adding their identifiers to the array. If the array is empty, all blueprints will be backed up.
+# Example format: 
+# specificBlueprints = ["blueprint1", "blueprint2"]
+
+specificBlueprints = []
+
+SPECIFIC = False
+if specificBlueprints:
+    SPECIFIC = True
 
 #The purpose of this script is to copy data between organization. It will copy Blueprints, Entities, Actions, Scorecards, Teams and Users.
 #Fill in the secrets or set them as environment variables
@@ -35,6 +47,14 @@ if PORT_NEW_CLIENT_ID != "" or PORT_NEW_CLIENT_SECRET != "":
         'Authorization': f'Bearer {new_access_token}'
     }
 
+def getSpecificBlueprints(blueprints):
+    returnBlueprints = []
+    for blueprint in blueprints:
+        print(f"Getting blueprint {blueprint}")
+        res = requests.get(f'{API_URL}/blueprints/{blueprint}', headers=old_headers)
+        resp = res.json()
+        returnBlueprints.append(resp["blueprint"])
+    return returnBlueprints
 
 def getBlueprints():
     print("Getting blueprints")
@@ -42,11 +62,29 @@ def getBlueprints():
     resp = res.json()["blueprints"]
     return resp
 
+def getSpecificScorecards(blueprints):
+    returnScorecards = []
+    for blueprint in blueprints:
+        print(f"Getting scorecards for blueprint {blueprint}")
+        res = requests.get(f'{API_URL}/blueprints/{blueprint}/scorecards', headers=old_headers)
+        resp = res.json()["scorecards"]
+        returnScorecards += resp
+    return returnScorecards
+
 def getScorecards():
     print("Getting scorecards")
     res = requests.get(f'{API_URL}/scorecards', headers=old_headers)
     resp = res.json()["scorecards"]
     return resp
+
+def getSpecificActions(blueprints):
+    returnActions = []
+    for blueprint in blueprints:
+        print(f"Getting actions for blueprint {blueprint}")
+        res = requests.get(f'{API_URL}/blueprints/{blueprint}/actions', headers=old_headers)
+        resp = res.json()["actions"]
+        returnActions += resp
+    return returnActions
 
 def getActions():
     print("Getting actions")
@@ -72,11 +110,12 @@ def postBlueprints(blueprints):
     cleanBP = copy.deepcopy(blueprints)
     relationsBP = copy.deepcopy(blueprints)
     for bp in cleanBP:       # send blueprint without relations and mirror properties
-        print(f"posting blueprint {bp['identifier']} without relations and mirror")
+        print(f"posting blueprint {bp['identifier']} without relations, mirrors and aggregations")
         if bp.get("teamInheritance") is not None: #handle team inheritance
             bp.pop("teamInheritance", None)
-        bp.get("relations").clear()
-        bp.get("mirrorProperties").clear()
+        bp["aggregationProperties"] = {} # remove the data from the bluerint
+        bp["relations"] = {}
+        bp["mirrorProperties"] = {}
         res = requests.post(f'{API_URL}/blueprints', headers=new_headers, json=bp)
         if res.ok != True:
             print("error posting blueprint:" + json.dumps(res.json()))
@@ -85,7 +124,8 @@ def postBlueprints(blueprints):
         print(f"patching blueprint {blueprint['identifier']} with relations")
         if blueprint.get("teamInheritance") is not None: #handle team inheritance
             blueprint.pop("teamInheritance", None)
-        blueprint.get("mirrorProperties").clear()
+        bp["aggregationProperties"] = {} # remove the data from the bluerint
+        bp["mirrorProperties"] = {}
         res = requests.patch(f'{API_URL}/blueprints/{blueprint["identifier"]}', headers=new_headers, json=blueprint)
         if res.ok != True:
             print("error patching blueprint:" + json.dumps(res.json()))
@@ -97,6 +137,17 @@ def postBlueprints(blueprints):
             print("error patching blueprint:" + json.dumps(res.json()))
             error = True
 
+def postExcelEntities(entities):
+    for item in entities.values():
+        entity = json.loads(item)
+        if entity["icon"] is None:
+            entity.pop("icon", None)
+        print(f"posting entity {entity['identifier']}")
+        res = requests.post(f'{API_URL}/blueprints/{entity["blueprint"]}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true', headers=new_headers, json=entity)
+        if res.ok != True:
+            print("error posting entity:" + json.dumps(res.json()))
+            error = True
+
 def postEntities(entities):
     global error
     for blueprint in entities:
@@ -104,7 +155,7 @@ def postEntities(entities):
         for entity in entities[blueprint]:
             if entity["icon"] is None:
                 entity.pop("icon", None)
-            res = requests.post(f'{API_URL}/blueprints/{blueprint}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=false', headers=new_headers, json=entity)
+            res = requests.post(f'{API_URL}/blueprints/{blueprint}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true', headers=new_headers, json=entity)
             if res.ok != True:
                 print("error posting entity:" + json.dumps(res.json()))
                 error = True
@@ -113,7 +164,6 @@ def postScorecards(scorecards):
     global error
     print("Posting scorecards")
     for scorecard in scorecards:
-        print(f"posting scorecard {scorecard['identifier']}")
         scorecard.pop("id", None)
         scorecard.pop("createdAt", None)
         scorecard.pop("updatedAt", None)
@@ -133,6 +183,10 @@ def postActions(actions):
         print(f"posting action {action['identifier']}")
         action.pop("id", None)
         blueprint = action.pop("blueprint", None)
+        if pd.isna(action["description"]): # check if description is NaN
+            action["description"] = "" # set description to empty string
+        if pd.isna(action["icon"]): # check if icon is NaN
+            action["icon"] = "" # set icon to empty string
         action.pop("createdAt", None)
         action.pop("updatedAt", None)
         action.pop("createdBy", None)
@@ -142,56 +196,96 @@ def postActions(actions):
             print(f"error posting action: " + json.dumps(res.json()))
             teamError = True
 
+def parser(data):
+    for item in data:
+        for key in item:
+            if type(item[key]) == str:
+                try:
+                    item[key] = json.loads(item[key])
+                except:
+                    pass
+    return data
 
 def postTeams(teams):
     global error
     print("Posting teams")
     for team in teams:
+        if pd.isna(team["description"]): # check if description is NaN
+            team["description"] = "" # set description to empty string
         res = requests.post(f'{API_URL}/teams', headers=new_headers, json=team)
         if res.ok != True:
             print(f"error posting team {team['name']} :" + json.dumps(res.json()))
             error = True
 
-
 def main():
     if RUN_MODE == "backup" or RUN_MODE == "migrate":
-        blueprints = getBlueprints()
-        scorecards = getScorecards()
-        actions = getActions()
+        if SPECIFIC: #check if we are backing up specific blueprints
+            blueprints = getSpecificBlueprints(specificBlueprints)
+            scorecards = getSpecificScorecards(specificBlueprints)
+            actions = getSpecificActions(specificBlueprints)
+        else: #if not, get all blueprints
+            blueprints = getBlueprints()
+            scorecards = getScorecards()
+            actions = getActions()
         teams = getTeams()
         entities = {}
+        for blueprint in blueprints:
+            bp_id = blueprint["identifier"]
+            entities[bp_id] = getEntites(bp_id)
         if RUN_MODE == "backup":
-            for blueprint in blueprints:
-                bp_id = blueprint["identifier"]
-                entities[bp_id] = getEntites(bp_id)
-            with open('bk-blueprints.json', 'w') as outfile:
-                json.dump(blueprints, outfile)
-            with open('bk-scorecards.json', 'w') as outfile:
-                json.dump(scorecards, outfile)
-            with open('bk-actions.json', 'w') as outfile:
-                json.dump(actions, outfile)
-            with open('bk-teams.json', 'w') as outfile:
-                json.dump(teams, outfile)
-            with open('bk-entities.json', 'w') as outfile:
-                json.dump(entities, outfile)
+            if FORMAT == "tar": #if we are backing up to tar, dump the jsons to files
+                with open('bk-blueprints.json', 'w') as outfile:
+                    json.dump(blueprints, outfile)
+                with open('bk-scorecards.json', 'w') as outfile:
+                    json.dump(scorecards, outfile)
+                with open('bk-actions.json', 'w') as outfile:
+                    json.dump(actions, outfile)
+                with open('bk-teams.json', 'w') as outfile:
+                    json.dump(teams, outfile)
+                with open('bk-entities.json', 'w') as outfile:
+                  json.dump(entities, outfile)
+            else:
+                df_blueprints = pd.DataFrame(blueprints).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
+                df_scorecards = pd.DataFrame(scorecards).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
+                df_actions = pd.DataFrame(actions).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
+                df_teams = pd.DataFrame(teams).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
+                df_entities = pd.DataFrame(entities.values(), index=entities.keys()).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
+                # Create an Excel writer object and write each DataFrame to a different sheet
+                with pd.ExcelWriter('bk-data.xlsx') as writer:
+                    df_blueprints.to_excel(writer, sheet_name='Blueprints', index=False)
+                    df_scorecards.to_excel(writer, sheet_name='Scorecards', index=False)
+                    df_actions.to_excel(writer, sheet_name='Actions', index=False)
+                    df_teams.to_excel(writer, sheet_name='Teams', index=False)
+                    df_entities.to_excel(writer, sheet_name='Entities', index=False)
 
     if RUN_MODE == "migrate" or RUN_MODE == "restore":
         if RUN_MODE == "restore":
-            with open('bk-blueprints.json') as json_file:
-                blueprints = json.load(json_file)
-            with open('bk-scorecards.json') as json_file:
-                scorecards = json.load(json_file)
-            with open('bk-actions.json') as json_file:
-                actions = json.load(json_file)
-            with open('bk-teams.json') as json_file:
-                teams = json.load(json_file)
-            with open('bk-entities.json') as json_file:
-                entities = json.load(json_file)
+            if FORMAT == "tar": #if we are restoring from tar, load the data from JSON files
+                with open('bk-blueprints.json') as json_file:
+                    blueprints = json.load(json_file)
+                with open('bk-scorecards.json') as json_file:
+                    scorecards = json.load(json_file)
+                with open('bk-actions.json') as json_file:
+                    actions = json.load(json_file)
+                with open('bk-teams.json') as json_file:
+                    teams = json.load(json_file)
+                with open('bk-entities.json') as json_file:
+                    entities = json.load(json_file)
+            else: #load the data from excel spreadsheet
+                blueprints = parser(pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Blueprints').to_dict(orient='records'))
+                scorecards = parser((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Scorecards').to_dict(orient='records')))
+                actions = parser((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Actions').to_dict(orient='records')))
+                teams = parser((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Teams').to_dict(orient='records')))
+                entities = ((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Entities').to_dict(orient='index')))[0]
+                print(entities)
         postBlueprints(blueprints)
         postScorecards(scorecards)
         postActions(actions)
         postTeams(teams)
-        postEntities(entities)
+        if FORMAT == "tar":
+            postEntities(entities)
+        else:
+            postExcelEntities(entities)
     if error:
         print("Errors occured during migration, please check logs")
     elif teamError:
