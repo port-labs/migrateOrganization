@@ -3,10 +3,7 @@ import requests
 import os
 import copy
 import pandas as pd
-import openpyxl
-import math
  
-wb = openpyxl.Workbook()
 API_URL = 'https://api.getport.io/v1'
 
 global error 
@@ -18,9 +15,8 @@ FORMAT = os.getenv("MIGRATION_FORMAT", "tar") #Format = tar or excel
 #Selective format = In case you are interested in only backing up specific blueprints, specify them here by adding their identifiers to the array. If the array is empty, all blueprints will be backed up.
 # Example format: 
 # specificBlueprints = ["blueprint1", "blueprint2"]
-#
 
-specificBlueprints = ["repository", "domain", "environmenttest"]
+specificBlueprints = []
 
 SPECIFIC = False
 if specificBlueprints:
