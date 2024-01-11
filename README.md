@@ -24,10 +24,10 @@ bash migrate.sh
 ```
 
 List of required variables for the script (Port's organization credentials):
- - 'PORT_OLD_CLIENT_ID'
- - 'PORT_OLD_CLIENT_SECRET'
- - 'PORT_NEW_CLIENT_ID'
- - 'PORT_NEW_CLIENT_SECRET'
+ - 'PORT_OLD_CLIENT_ID' - taken from the credentials of the Port organization you pull data from.
+ - 'PORT_OLD_CLIENT_SECRET' - taken from the credentials of the Port organization you pull data from.
+ - 'PORT_NEW_CLIENT_ID' - taken from the credentials of the Port organization you push data to.
+ - 'PORT_NEW_CLIENT_SECRET' - taken from the credentials of the Port organization you push data to.
 
  In case you have encountered issues and would like to debug the code, you can delete the entire data from the new organization by running:
 
