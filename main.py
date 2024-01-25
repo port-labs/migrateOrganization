@@ -152,9 +152,14 @@ def postEntities(entities):
     global error
     for blueprint in entities:
         print(f"posting entities for blueprint {blueprint}")
+        bp_object = getSpecificBlueprints([blueprint])
+        if bp_object["teamInheritance"] is not None: #handle team inheritance
+            removeTeam = True
         for entity in entities[blueprint]:
             if entity["icon"] is None:
                 entity.pop("icon", None)
+            if removeTeam:
+                entity.pop("team", None)
             res = requests.post(f'{API_URL}/blueprints/{blueprint}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true', headers=new_headers, json=entity)
             if res.ok != True:
                 print("error posting entity:" + json.dumps(res.json()))

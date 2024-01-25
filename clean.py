@@ -29,3 +29,12 @@ for blueprint in resp:
     res = requests.delete(f'{API_URL}/blueprints/{blueprint["identifier"]}', headers=headers)
     if res.ok != True:
         print("error while deleting blueprint: "+ json.dumps(res.json()))
+
+print("Getting teams")
+res = requests.get(f'{API_URL}/teams', headers=headers)
+resp = res.json()["teams"]
+for team in resp:
+    print(f"deleting team {team['name']}")
+    res = requests.delete(f'{API_URL}/teams/{team["name"]}', headers=headers)
+    if res.ok != True:
+        print("error while deleting team: "+ json.dumps(res.json()))
