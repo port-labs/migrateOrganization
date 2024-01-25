@@ -183,9 +183,9 @@ def postActions(actions):
         print(f"posting action {action['identifier']}")
         action.pop("id", None)
         blueprint = action.pop("blueprint", None)
-        if pd.isna(action["description"]): # check if description is NaN
+        if pd.isna(action.get("description", "")): # check if description is NaN
             action["description"] = "" # set description to empty string
-        if pd.isna(action["icon"]): # check if icon is NaN
+        if pd.isna(action.get("icon", "Microservice")): # check if icon is NaN
             action["icon"] = "" # set icon to empty string
         action.pop("createdAt", None)
         action.pop("updatedAt", None)
@@ -210,7 +210,7 @@ def postTeams(teams):
     global error
     print("Posting teams")
     for team in teams:
-        if pd.isna(team["description"]): # check if description is NaN
+        if pd.isna(team.get("description", "")): # check if description is NaN
             team["description"] = "" # set description to empty string
         res = requests.post(f'{API_URL}/teams', headers=new_headers, json=team)
         if res.ok != True:
