@@ -3,6 +3,8 @@ import requests
 import os
 import copy
 import pandas as pd
+import math
+import openpyxl
  
 API_URL = 'https://api.getport.io/v1'
 
@@ -16,7 +18,7 @@ FORMAT = os.getenv("MIGRATION_FORMAT", "tar") #Format = tar or excel
 # Example format: 
 # specificBlueprints = ["blueprint1", "blueprint2"]
 
-specificBlueprints = []
+specificBlueprints = ["repository", "domain", "more_domain"]
 
 SPECIFIC = False
 if specificBlueprints:
@@ -52,8 +54,8 @@ def getSpecificBlueprints(blueprints):
     for blueprint in blueprints:
         print(f"Getting blueprint {blueprint}")
         res = requests.get(f'{API_URL}/blueprints/{blueprint}', headers=old_headers)
-        resp = res.json()
-        returnBlueprints.append(resp["blueprint"])
+        resp = res.json()["blueprint"]
+        returnBlueprints.append(resp)
     return returnBlueprints
 
 def getBlueprints():
@@ -111,21 +113,25 @@ def postBlueprints(blueprints):
     relationsBP = copy.deepcopy(blueprints)
     for bp in cleanBP:       # send blueprint without relations and mirror properties
         print(f"posting blueprint {bp['identifier']} without relations, mirrors and aggregations")
-        if bp.get("teamInheritance") is not None: #handle team inheritance
+        if bp.get("teamInheritance") is not None:
             bp.pop("teamInheritance", None)
-        bp["aggregationProperties"] = {} # remove the data from the bluerint
+        bp["aggregationProperties"] = {}
         bp["relations"] = {}
         bp["mirrorProperties"] = {}
+        bp.pop("createdAt", None)
+        bp.pop("updatedAt", None)
+        bp.pop("createdBy", None)
+        bp.pop("updatedBy", None)
         res = requests.post(f'{API_URL}/blueprints', headers=new_headers, json=bp)
         if res.ok != True:
             print("error posting blueprint:" + json.dumps(res.json()))
             error = True
     for blueprint in relationsBP:      # send blueprint with relations
         print(f"patching blueprint {blueprint['identifier']} with relations")
-        if blueprint.get("teamInheritance") is not None: #handle team inheritance
+        if blueprint.get("teamInheritance") is not None: 
             blueprint.pop("teamInheritance", None)
-        bp["aggregationProperties"] = {} # remove the data from the bluerint
-        bp["mirrorProperties"] = {}
+        blueprint["aggregationProperties"] = {} 
+        blueprint["mirrorProperties"] = {}
         res = requests.patch(f'{API_URL}/blueprints/{blueprint["identifier"]}', headers=new_headers, json=blueprint)
         if res.ok != True:
             print("error patching blueprint:" + json.dumps(res.json()))
@@ -137,23 +143,27 @@ def postBlueprints(blueprints):
             print("error patching blueprint:" + json.dumps(res.json()))
             error = True
 
-def postExcelEntities(entities):
+def postExcelEntities(entities, blueprints):
     for item in entities.values():
-        entity = json.loads(item)
-        if entity["icon"] is None:
-            entity.pop("icon", None)
-        print(f"posting entity {entity['identifier']}")
-        res = requests.post(f'{API_URL}/blueprints/{entity["blueprint"]}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true', headers=new_headers, json=entity)
-        if res.ok != True:
-            print("error posting entity:" + json.dumps(res.json()))
-            error = True
+        for entity in item:
+            bp_object = next((bp for bp in blueprints if bp["identifier"] == entity["blueprint"]), None)
+            if bp_object.get("teamInheritance") is not None:
+                entity.pop("team", None)
+            if entity.get("icon") is None:
+                entity.pop("icon", None)
+            print(f"posting entity {entity['identifier']}")
+            res = requests.post(f'{API_URL}/blueprints/{entity["blueprint"]}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true', headers=new_headers, json=entity)
+            if res.ok != True:
+                print("error posting entity:" + json.dumps(res.json()))
+                error = True
 
-def postEntities(entities):
+def postEntities(entities, blueprints):
     global error
     for blueprint in entities:
+        removeTeam = False
         print(f"posting entities for blueprint {blueprint}")
-        bp_object = getSpecificBlueprints([blueprint])
-        if bp_object["teamInheritance"] is not None: #handle team inheritance
+        bp_object = next((bp for bp in blueprints if bp["identifier"] == blueprint), None)
+        if bp_object.get("teamInheritance") is not None:
             removeTeam = True
         for entity in entities[blueprint]:
             if entity["icon"] is None:
@@ -209,6 +219,10 @@ def parser(data):
                     item[key] = json.loads(item[key])
                 except:
                     pass
+            elif math.isnan(item[key]):
+                item[key] = None
+            else:
+                pass
     return data
 
 def postTeams(teams):
@@ -222,13 +236,13 @@ def postTeams(teams):
             print(f"error posting team {team['name']} :" + json.dumps(res.json()))
             error = True
 
-def main():
+def main(): 
     if RUN_MODE == "backup" or RUN_MODE == "migrate":
         if SPECIFIC: #check if we are backing up specific blueprints
             blueprints = getSpecificBlueprints(specificBlueprints)
             scorecards = getSpecificScorecards(specificBlueprints)
             actions = getSpecificActions(specificBlueprints)
-        else: #if not, get all blueprints
+        else: 
             blueprints = getBlueprints()
             scorecards = getScorecards()
             actions = getActions()
@@ -238,7 +252,7 @@ def main():
             bp_id = blueprint["identifier"]
             entities[bp_id] = getEntites(bp_id)
         if RUN_MODE == "backup":
-            if FORMAT == "tar": #if we are backing up to tar, dump the jsons to files
+            if FORMAT == "tar": 
                 with open('bk-blueprints.json', 'w') as outfile:
                     json.dump(blueprints, outfile)
                 with open('bk-scorecards.json', 'w') as outfile:
@@ -254,18 +268,26 @@ def main():
                 df_scorecards = pd.DataFrame(scorecards).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
                 df_actions = pd.DataFrame(actions).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
                 df_teams = pd.DataFrame(teams).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
-                df_entities = pd.DataFrame(entities.values(), index=entities.keys()).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
-                # Create an Excel writer object and write each DataFrame to a different sheet
                 with pd.ExcelWriter('bk-data.xlsx') as writer:
                     df_blueprints.to_excel(writer, sheet_name='Blueprints', index=False)
                     df_scorecards.to_excel(writer, sheet_name='Scorecards', index=False)
                     df_actions.to_excel(writer, sheet_name='Actions', index=False)
                     df_teams.to_excel(writer, sheet_name='Teams', index=False)
-                    df_entities.to_excel(writer, sheet_name='Entities', index=False)
+                    for blueprint, entity_list in entities.items():
+                        for entity in entity_list:
+                            for key in entity["properties"]:
+                                 entity[f"prop_{key}"] = entity["properties"][key]
+                            for key in entity["relations"]:
+                                entity[f"rel_{key}"] = entity["relations"][key]
+                            entity.pop("properties", None)
+                            entity.pop("scorecardsStats", None)
+                            entity.pop("relations", None)
+                        df = pd.DataFrame(entity_list).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
+                        df.to_excel(writer, sheet_name=blueprint, index=False)
 
     if RUN_MODE == "migrate" or RUN_MODE == "restore":
         if RUN_MODE == "restore":
-            if FORMAT == "tar": #if we are restoring from tar, load the data from JSON files
+            if FORMAT == "tar": 
                 with open('bk-blueprints.json') as json_file:
                     blueprints = json.load(json_file)
                 with open('bk-scorecards.json') as json_file:
@@ -276,21 +298,38 @@ def main():
                     teams = json.load(json_file)
                 with open('bk-entities.json') as json_file:
                     entities = json.load(json_file)
-            else: #load the data from excel spreadsheet
+            else: 
                 blueprints = parser(pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Blueprints').to_dict(orient='records'))
                 scorecards = parser((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Scorecards').to_dict(orient='records')))
                 actions = parser((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Actions').to_dict(orient='records')))
                 teams = parser((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Teams').to_dict(orient='records')))
-                entities = ((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Entities').to_dict(orient='index')))[0]
-                print(entities)
+                entities = {}
+                sheet_names = pd.ExcelFile(os.getenv("FILE_NAME")).sheet_names
+                for sheet in sheet_names:
+                    if sheet not in ['Blueprints', 'Scorecards', 'Actions', 'Teams']:  # Skip non-entity sheets
+                        df = parser(pd.read_excel(os.getenv("FILE_NAME"), sheet_name=sheet).to_dict(orient='records'))
+                        for entity in df:
+                            entity["properties"] = {}
+                            entity["relations"] = {}
+                            initial_entity = dict(entity)
+                            for key, value in initial_entity.items():
+                                if value is None:
+                                    entity.pop(key)
+                                elif key.startswith("prop_"):
+                                    entity["properties"][key[5:]] = value
+                                    entity.pop(key)
+                                elif key.startswith("rel_"):
+                                    entity["relations"][key[4:]] = value
+                                    entity.pop(key)
+                        entities[sheet] = df
         postBlueprints(blueprints)
         postScorecards(scorecards)
         postActions(actions)
         postTeams(teams)
         if FORMAT == "tar":
-            postEntities(entities)
+            postEntities(entities, blueprints)
         else:
-            postExcelEntities(entities)
+            postExcelEntities(entities, blueprints)
     if error:
         print("Errors occured during migration, please check logs")
     elif teamError:
