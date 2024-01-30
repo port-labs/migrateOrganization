@@ -19,7 +19,7 @@ MIGRATION_FORMAT=${MIGRATION_FORMAT:-"tar"}
 
 
 if [ $IS_MIGRATE != true ] ; then
-    if [ $FORMAT = "tar" ] ; then
+    if [ $MIGRATION_FORMAT = "tar" ] ; then
         if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ] &&  [ -n "$S3_BUCKET_REGION" ] && [ -n "$BACKUP_FILE_PATH" ] ; then
             aws s3 cp s3://$BACKUP_FILE_PATH/$FILE_NAME . --region $S3_BUCKET_REGION
             tar -xvzf ./backup-*.tar.gz ./bk*
@@ -37,7 +37,8 @@ export PORT_NEW_CLIENT_ID=${PORT_NEW_CLIENT_ID}
 export PORT_NEW_CLIENT_SECRET=${PORT_NEW_CLIENT_SECRET}
 export RUN_MODE=$RUN_MODE
 python3 main.py
-
-if [ $IS_MIGRATE != true ] ; then
-    rm -rf ./bk*
-fi
+ 
+# Optionally, you can remove the local backup file after uploading
+# if [ $IS_MIGRATE != true ] ; then
+#     rm -rf ./bk*
+# fi
