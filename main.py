@@ -18,7 +18,7 @@ FORMAT = os.getenv("MIGRATION_FORMAT", "tar") #Format = tar or excel
 # Example format: 
 # specificBlueprints = ["blueprint1", "blueprint2"]
 
-specificBlueprints = ["repository", "domain", "more_domain"]
+specificBlueprints = []
 
 SPECIFIC = False
 if specificBlueprints:
@@ -118,10 +118,6 @@ def postBlueprints(blueprints):
         bp["aggregationProperties"] = {}
         bp["relations"] = {}
         bp["mirrorProperties"] = {}
-        bp.pop("createdAt", None)
-        bp.pop("updatedAt", None)
-        bp.pop("createdBy", None)
-        bp.pop("updatedBy", None)
         res = requests.post(f'{API_URL}/blueprints', headers=new_headers, json=bp)
         if res.ok != True:
             print("error posting blueprint:" + json.dumps(res.json()))
