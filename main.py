@@ -265,10 +265,15 @@ def main():
                 df_actions = pd.DataFrame(actions).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
                 df_teams = pd.DataFrame(teams).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
                 with pd.ExcelWriter('bk-data.xlsx') as writer:
+                    print("Writing blueprints to excel")
                     df_blueprints.to_excel(writer, sheet_name='Blueprints', index=False)
+                    print("Writing scorecards to excel")
                     df_scorecards.to_excel(writer, sheet_name='Scorecards', index=False)
+                    print("Writing actions to excel")
                     df_actions.to_excel(writer, sheet_name='Actions', index=False)
+                    print("Writing teams to excel")
                     df_teams.to_excel(writer, sheet_name='Teams', index=False)
+                    print("Writing entities to excel")
                     for blueprint, entity_list in entities.items():
                         print(f"Writing entities for blueprint {blueprint} to excel")
                         for entity in entity_list:
