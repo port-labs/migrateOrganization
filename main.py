@@ -283,9 +283,10 @@ def main():
                     logging.info("Starting to write entities")
                     for blueprint, entity_list in entities.items():
                         print(f"Writing entities for blueprint {blueprint} to excel")
-                        logging.info("Writing entities for blueprint {blueprint} to excel")
+                        logging.info(f"Writing entities for blueprint {blueprint} to excel")
                         for entity in entity_list:
                             print(f"Writing entity {entity['identifier']} to excel")
+                            logging.info(f"Writing entity {entity['identifier']} to excel")
                             logging.info(entity)
                             for key in entity["properties"]:
                                  entity[f"prop_{key}"] = entity["properties"][key]
