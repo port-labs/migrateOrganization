@@ -271,6 +271,7 @@ def main():
                     df_teams.to_excel(writer, sheet_name='Teams', index=False)
                     for blueprint, entity_list in entities.items():
                         for entity in entity_list:
+                            print(f"Writing entity {entity} to excel")    # print entity for debugging
                             for key in entity["properties"]:
                                  entity[f"prop_{key}"] = entity["properties"][key]
                             for key in entity["relations"]:
