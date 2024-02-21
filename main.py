@@ -5,7 +5,9 @@ import copy
 import pandas as pd
 import math
 import openpyxl
- 
+import logging
+logging.basicConfig(filename="logs.log", level=logging.INFO)
+
 API_URL = 'https://api.getport.io/v1'
 
 global error 
@@ -266,18 +268,25 @@ def main():
                 df_teams = pd.DataFrame(teams).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
                 with pd.ExcelWriter('bk-data.xlsx') as writer:
                     print("Writing blueprints to excel")
+                    logging.info("Starting to write blueprints")
                     df_blueprints.to_excel(writer, sheet_name='Blueprints', index=False)
                     print("Writing scorecards to excel")
+                    logging.info("Starting to write scorecards")
                     df_scorecards.to_excel(writer, sheet_name='Scorecards', index=False)
                     print("Writing actions to excel")
+                    logging.info("Starting to write actions")
                     df_actions.to_excel(writer, sheet_name='Actions', index=False)
                     print("Writing teams to excel")
+                    logging.info("Starting to write teams")
                     df_teams.to_excel(writer, sheet_name='Teams', index=False)
                     print("Writing entities to excel")
+                    logging.info("Starting to write entities")
                     for blueprint, entity_list in entities.items():
                         print(f"Writing entities for blueprint {blueprint} to excel")
+                        logging.info("Writing entities for blueprint {blueprint} to excel")
                         for entity in entity_list:
-                            print(f"Writing entity {entity} to excel")    # print entity for debugging
+                            print(f"Writing entity {entity['identifier']} to excel")
+                            logging.info(entity)
                             for key in entity["properties"]:
                                  entity[f"prop_{key}"] = entity["properties"][key]
                             for key in entity["relations"]:
