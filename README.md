@@ -4,12 +4,33 @@ This script will migrate your Blueprints, entities, scorecards, actions and team
 
 This script can also be used to backup and restore your Port data.
 
+## Creating a Virtual Environment
+For all use cases below, it is suggested to install dependencies inside a virtual environment. To create one execute the next
+step only once inside the cloned project:
+
+```bash
+python -m venv .venv
+```
+
+At the beginning of a session active your virtual environment by running:
+```bash
+source .venv/bin/activate
+```
+
+At the end of a session deactivate your environment by typing:
+```bash
+deactivate
+```
+
+For example, in the instructions below, you will find a line to install dependencies via `pip`. You should activate your 
+environment before running `pip`. Deactivation should happen after you have run the script(s).
+
 # How to migrate
 In order to use, run in your terminal the following commands:
 
 ```
 export PORT_OLD_CLIENT_ID=<ENTER OLD PORT CLIENT ID>
-export PORT_OLD_CLIENT_SECRET= <ENTER OLD PORT CLIENT SECRET>
+export PORT_OLD_CLIENT_SECRET=<ENTER OLD PORT CLIENT SECRET>
 export PORT_NEW_CLIENT_ID=<ENTER NEW PORT CLIENT ID>
 export PORT_NEW_CLIENT_SECRET=<ENTER NEW PORT CLIENT SECRET>
 
@@ -59,7 +80,7 @@ export S3_SAVE_PATH="your-s3-save-path-including-bucket-name"
 
  ```
 export PORT_CLIENT_ID=<ENTER PORT CLIENT ID>
-export PORT_CLIENT_SECRET= <ENTER PORT CLIENT SECRET>
+export PORT_CLIENT_SECRET=<ENTER PORT CLIENT SECRET>
 
 git clone https://github.com/port-labs/migrateOrganization.git
 
