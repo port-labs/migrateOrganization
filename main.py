@@ -149,6 +149,7 @@ def postExcelEntities(entities, blueprints):
                 entity.pop("icon", None)
             print(f"posting entity {entity['identifier']}")
             res = requests.post(f'{API_URL}/blueprints/{entity["blueprint"]}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true', headers=new_headers, json=entity)
+            print("Posted entity:" + entity["identifier"] + " , status code:"+ str(res.status_code))
             if res.ok != True:
                 print("error posting entity:" + json.dumps(res.json()))
                 error = True
@@ -167,6 +168,7 @@ def postEntities(entities, blueprints):
             if removeTeam:
                 entity.pop("team", None)
             res = requests.post(f'{API_URL}/blueprints/{blueprint}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true', headers=new_headers, json=entity)
+            print("Posted entity:" + entity["identifier"] + " , status code:"+ str(res.status_code))
             if res.ok != True:
                 print("error posting entity:" + json.dumps(res.json()))
                 error = True
