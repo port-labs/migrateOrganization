@@ -14,21 +14,22 @@ headers = {
     'Authorization': f'Bearer {new_access_token}'
 }
 
-
+systemBlueprints = ["_user", "_team"]
 
 print("Getting blueprints")
 res = requests.get(f'{API_URL}/blueprints', headers=headers)
 resp = res.json()["blueprints"]
 
 for blueprint in resp:
-    print(f"deleting entities of blueprint {blueprint['identifier']}")
-    res = requests.delete(f'{API_URL}/blueprints/{blueprint["identifier"]}/all-entities', headers=headers)
-    if res.ok != True:
-        print("error while deleting entities: "+ json.dumps(res.json()))
-    print(f"deleting blueprint {blueprint['identifier']}")
-    res = requests.delete(f'{API_URL}/blueprints/{blueprint["identifier"]}', headers=headers)
-    if res.ok != True:
-        print("error while deleting blueprint: "+ json.dumps(res.json()))
+    if blueprint["identifier"] not in systemBlueprints:
+        print(f"deleting entities of blueprint {blueprint['identifier']}")
+        res = requests.delete(f'{API_URL}/blueprints/{blueprint["identifier"]}/all-entities', headers=headers)
+        if res.ok != True:
+            print("error while deleting entities: "+ json.dumps(res.json()))
+        print(f"deleting blueprint {blueprint['identifier']}")
+        res = requests.delete(f'{API_URL}/blueprints/{blueprint["identifier"]}', headers=headers)
+        if res.ok != True:
+            print("error while deleting blueprint: "+ json.dumps(res.json()))
 
 print("Getting teams")
 res = requests.get(f'{API_URL}/teams', headers=headers)

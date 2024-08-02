@@ -14,6 +14,8 @@ global teamError
 teamError = False
 FORMAT = os.getenv("MIGRATION_FORMAT", "tar") #Format = tar or excel
 
+systemBlueprints = ["_user", "_team"]
+
 #Selective format = In case you are interested in only backing up specific blueprints, specify them here by adding their identifiers to the array. If the array is empty, all blueprints will be backed up.
 # Example format: 
 # specificBlueprints = ["blueprint1", "blueprint2"]
@@ -23,6 +25,8 @@ specificBlueprints = []
 SPECIFIC = False
 if specificBlueprints:
     SPECIFIC = True
+
+global new_headers
 
 #The purpose of this script is to copy data between organization. It will copy Blueprints, Entities, Actions, Scorecards, Teams and Users.
 #Fill in the secrets or set them as environment variables
@@ -42,7 +46,16 @@ if PORT_OLD_CLIENT_ID != "" or PORT_OLD_CLIENT_SECRET != "":
     }
 
 if PORT_NEW_CLIENT_ID != "" or PORT_NEW_CLIENT_SECRET != "":
+    global new_headers
     new_credentials = { 'clientId': PORT_NEW_CLIENT_ID, 'clientSecret': PORT_NEW_CLIENT_SECRET }
+    new_credentials = requests.post(f'{API_URL}/auth/access_token', json=new_credentials)
+    new_access_token = new_credentials.json()["accessToken"]
+    new_headers = {
+        'Authorization': f'Bearer {new_access_token}'
+    }
+
+def getNewToken():
+    global new_headers
     new_credentials = requests.post(f'{API_URL}/auth/access_token', json=new_credentials)
     new_access_token = new_credentials.json()["accessToken"]
     new_headers = {
@@ -62,6 +75,7 @@ def getBlueprints():
     print("Getting blueprints")
     res = requests.get(f'{API_URL}/blueprints', headers=old_headers)
     resp = res.json()["blueprints"]
+    resp = [bp for bp in resp if bp["identifier"] not in systemBlueprints]
     return resp
 
 def getSpecificScorecards(blueprints):
@@ -150,6 +164,15 @@ def postExcelEntities(entities, blueprints):
             print(f"posting entity {entity['identifier']}")
             res = requests.post(f'{API_URL}/blueprints/{entity["blueprint"]}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true', headers=new_headers, json=entity)
             print("Posted entity:" + entity["identifier"] + " , status code:"+ str(res.status_code))
+            if res.status_code == 401:
+                print("Received 401 Unauthorized. Generating new token and retrying...")
+                getNewToken()
+
+                # Retry posting the entity after getting a new token
+                res = requests.post(
+                    f'{API_URL}/blueprints/{blueprint}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true',
+                    headers=new_headers, json=entity
+                )
             if res.ok != True:
                 print("error posting entity:" + json.dumps(res.json()))
                 error = True
@@ -169,6 +192,15 @@ def postEntities(entities, blueprints):
                 entity.pop("team", None)
             res = requests.post(f'{API_URL}/blueprints/{blueprint}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true', headers=new_headers, json=entity)
             print("Posted entity:" + entity["identifier"] + " , status code:"+ str(res.status_code))
+            if res.status_code == 401:
+                print("Received 401 Unauthorized. Generating new token and retrying...")
+                getNewToken()
+
+                # Retry posting the entity after getting a new token
+                res = requests.post(
+                    f'{API_URL}/blueprints/{blueprint}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true',
+                    headers=new_headers, json=entity
+                )
             if res.ok != True:
                 print("error posting entity:" + json.dumps(res.json()))
                 error = True
