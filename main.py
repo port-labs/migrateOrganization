@@ -170,7 +170,7 @@ def postExcelEntities(entities, blueprints):
 
                 # Retry posting the entity after getting a new token
                 res = requests.post(
-                    f'{API_URL}/blueprints/{blueprint}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true',
+                    res = requests.post(f'{API_URL}/blueprints/{entity["blueprint"]}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true', headers=new_headers, json=entity),
                     headers=new_headers, json=entity
                 )
             if res.ok != True:
@@ -197,10 +197,7 @@ def postEntities(entities, blueprints):
                 getNewToken()
 
                 # Retry posting the entity after getting a new token
-                res = requests.post(
-                    f'{API_URL}/blueprints/{blueprint}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true',
-                    headers=new_headers, json=entity
-                )
+                res = requests.post(f'{API_URL}/blueprints/{entity["blueprint"]}/entities?upsert=true&validation_only=false&create_missing_related_entities=true&merge=true', headers=new_headers, json=entity)
             if res.ok != True:
                 print("error posting entity:" + json.dumps(res.json()))
                 error = True
