@@ -93,14 +93,6 @@ def getScorecards():
     resp = res.json()["scorecards"]
     return resp
 
-def getSpecificActions(blueprints):
-    returnActions = []
-    for blueprint in blueprints:
-        print(f"Getting actions for blueprint {blueprint}")
-        res = requests.get(f'{API_URL}/blueprints/{blueprint}/actions', headers=old_headers)
-        resp = res.json()["actions"]
-        returnActions += resp
-    return returnActions
 
 def getActions():
     print("Getting actions")
@@ -233,7 +225,8 @@ def postActions(actions):
         action.pop("updatedAt", None)
         action.pop("createdBy", None)
         action.pop("updatedBy", None)
-        res = requests.post(f'{API_URL}/blueprints/{blueprint}/actions', headers=new_headers, json=action)
+        action.pop("id", None)
+        res = requests.post(f'{API_URL}/actions', headers=new_headers, json=action)
         if res.ok != True:
             print(f"error posting action: " + json.dumps(res.json()))
             teamError = True
@@ -268,7 +261,6 @@ def main():
         if SPECIFIC: #check if we are backing up specific blueprints
             blueprints = getSpecificBlueprints(specificBlueprints)
             scorecards = getSpecificScorecards(specificBlueprints)
-            actions = getSpecificActions(specificBlueprints)
         else: 
             blueprints = getBlueprints()
             scorecards = getScorecards()
