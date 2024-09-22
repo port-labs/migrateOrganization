@@ -7,6 +7,7 @@ import math
 import openpyxl
  
 API_URL = 'https://api.getport.io/v1'
+US_API_URL = 'https://api.us.getport.io/v1'
 
 global error 
 error = False
@@ -93,11 +94,20 @@ def getScorecards():
     resp = res.json()["scorecards"]
     return resp
 
+def getSidebar():
+    res = requests.get(f'{API_URL}/sidebars/catalog', headers=old_headers)
+    sidebar = res.json()['sidebar']['items']
 
 def getActions():
     print("Getting actions")
-    res = requests.get(f'{API_URL}/actions', headers=old_headers)
+    res = requests.get(f'{API_URL}/actions?version=v2', headers=old_headers)
     resp = res.json()["actions"]
+    return resp
+
+def getPages():
+    print("Getting pages")
+    res = requests.get(f'{API_URL}/pages', headers=old_headers)
+    resp = res.json()["pages"]
     return resp
 
 def getTeams():
@@ -124,7 +134,7 @@ def postBlueprints(blueprints):
         bp["aggregationProperties"] = {}
         bp["relations"] = {}
         bp["mirrorProperties"] = {}
-        res = requests.post(f'{API_URL}/blueprints', headers=new_headers, json=bp)
+        res = requests.post(f'{API_URL}/blueprints?create_catalog_page=false', headers=new_headers, json=bp)
         if res.ok != True:
             print("error posting blueprint:" + json.dumps(res.json()))
             error = True
@@ -144,6 +154,31 @@ def postBlueprints(blueprints):
         if res.ok != True:
             print("error patching blueprint:" + json.dumps(res.json()))
             error = True
+
+def postPages(pages, sidebar):
+    for catalog_item in sidebar:
+        if catalog_item['sidebarType'] == 'page': #catalog_item is a page
+            pageToPost = next((page for page in pages if page['identifier'] == catalog_item['identifier']), None)
+            print(f"posting page {catalog_item['identifier']}")
+            res = requests.post(f'{API_URL}/pages', headers=new_headers, json=pageToPost)
+            if res.ok != True:
+                print("error posting page:" + json.dumps(res.json()))
+                error = True
+        else: #catalog_item is a folder
+            catalog_item.pop("createdAt", None)
+            catalog_item.pop("updatedAt", None)
+            catalog_item.pop("createdBy", None)
+            catalog_item.pop("updatedBy", None)
+            catalog_item.pop("_orgId", None)
+            catalog_item.pop("_id", None)
+            catalog_item.pop("sidebar", None)
+            catalog_item.pop("sidebarType", None)
+            res = requests.post(f'{API_URL}/sidebars/catalog/folders', headers=new_headers, json=catalog_item)
+            if res.ok != True:
+                print("error posting catalog item:" + json.dumps(res.json()))
+                error = True
+            
+            
 
 def postExcelEntities(entities, blueprints):
     for item in entities.values():
@@ -215,7 +250,6 @@ def postActions(actions):
     print("Posting actions")
     for action in actions:
         print(f"posting action {action['identifier']}")
-        action.pop("id", None)
         blueprint = action.pop("blueprint", None)
         if pd.isna(action.get("description", "")): # check if description is NaN
             action["description"] = "" # set description to empty string
@@ -265,6 +299,8 @@ def main():
             blueprints = getBlueprints()
             scorecards = getScorecards()
             actions = getActions()
+        sidebar = getSidebar()
+        pages = getPages()
         teams = getTeams()
         entities = {}
         for blueprint in blueprints:
@@ -280,6 +316,10 @@ def main():
                     json.dump(actions, outfile)
                 with open('bk-teams.json', 'w') as outfile:
                     json.dump(teams, outfile)
+                with open('bk-pages.json', 'w') as outfile:
+                    json.dump(pages, outfile)
+                with open('bk-sidebar', 'w') as outfile:
+                    json.dump(sidebar, outfile)
                 with open('bk-entities.json', 'w') as outfile:
                   json.dump(entities, outfile)
             else:
@@ -287,11 +327,15 @@ def main():
                 df_scorecards = pd.DataFrame(scorecards).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
                 df_actions = pd.DataFrame(actions).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
                 df_teams = pd.DataFrame(teams).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
+                df_pages = pd.DataFrame(pages).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
+                df_sidebar = pd.DataFrame(sidebar).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
                 with pd.ExcelWriter('bk-data.xlsx') as writer:
                     df_blueprints.to_excel(writer, sheet_name='Blueprints', index=False)
                     df_scorecards.to_excel(writer, sheet_name='Scorecards', index=False)
                     df_actions.to_excel(writer, sheet_name='Actions', index=False)
                     df_teams.to_excel(writer, sheet_name='Teams', index=False)
+                    df_pages.to_excel(writer, sheet_name='Pages', index=False)
+                    df_sidebar.to_excel(writer, sheet_name='Sidebar', index=False)
                     for blueprint, entity_list in entities.items():
                         for entity in entity_list:
                             for key in entity["properties"]:
@@ -303,7 +347,7 @@ def main():
                             entity.pop("relations", None)
                         df = pd.DataFrame(entity_list).map(lambda x: json.dumps(x) if isinstance(x, dict) or isinstance(x,list) else x)
                         df.to_excel(writer, sheet_name=blueprint, index=False)
-
+                        
     if RUN_MODE == "migrate" or RUN_MODE == "restore":
         if RUN_MODE == "restore":
             if FORMAT == "tar": 
@@ -315,6 +359,10 @@ def main():
                     actions = json.load(json_file)
                 with open('bk-teams.json') as json_file:
                     teams = json.load(json_file)
+                with open('bk-pages') as json_file:
+                    pages = json.load(json_file)
+                with open('bk-sidebar') as json_file:
+                    sidebar = json.load(json_file)
                 with open('bk-entities.json') as json_file:
                     entities = json.load(json_file)
             else: 
@@ -322,10 +370,12 @@ def main():
                 scorecards = parser((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Scorecards').to_dict(orient='records')))
                 actions = parser((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Actions').to_dict(orient='records')))
                 teams = parser((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Teams').to_dict(orient='records')))
+                pages = parser((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Pages').to_dict(orient='records')))
+                sidebar = parser((pd.read_excel(os.getenv("FILE_NAME"), sheet_name='Sidebar').to_dict(orient='records')))
                 entities = {}
                 sheet_names = pd.ExcelFile(os.getenv("FILE_NAME")).sheet_names
                 for sheet in sheet_names:
-                    if sheet not in ['Blueprints', 'Scorecards', 'Actions', 'Teams']:  # Skip non-entity sheets
+                    if sheet not in ['Blueprints', 'Scorecards', 'Actions', 'Teams', 'Pages', 'Sidebar']:  # Skip non-entity sheets
                         df = parser(pd.read_excel(os.getenv("FILE_NAME"), sheet_name=sheet).to_dict(orient='records'))
                         for entity in df:
                             entity["properties"] = {}
@@ -344,11 +394,12 @@ def main():
         postBlueprints(blueprints)
         postScorecards(scorecards)
         postActions(actions)
+        postPages(pages, sidebar)
         postTeams(teams)
         if FORMAT == "tar":
-            postEntities(entities, blueprints)
+           postEntities(entities, blueprints)
         else:
-            postExcelEntities(entities, blueprints)
+           postExcelEntities(entities, blueprints)
     if error:
         print("Errors occured during migration, please check logs")
     elif teamError:
