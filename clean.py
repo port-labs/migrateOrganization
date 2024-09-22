@@ -16,20 +16,76 @@ headers = {
 
 systemBlueprints = ["_user", "_team"]
 
+print("Deleting actions")
+res = requests.get(f'{API_URL}/actions?version=v2', headers=headers)
+actions = res.json()["actions"]
+for action in actions:
+    print(f"deleting action {action['identifier']}")
+    res = requests.delete(f'{API_URL}/actions/{action["identifier"]}', headers=headers)
+    if res.ok != True:
+        print("error while deleting action: "+ json.dumps(res.json()))
+
+print("Deleting pages")
+res = requests.get(f'{API_URL}/pages', headers=headers)
+pages = res.json()["pages"]
+for page in pages:
+    print(f"deleting page {page['identifier']}")
+    res = requests.delete(f'{API_URL}/pages/{page["identifier"]}', headers=headers)
+    if res.ok != True:
+        print("error while deleting page: "+ json.dumps(res.json()))
+
 print("Getting blueprints")
 res = requests.get(f'{API_URL}/blueprints', headers=headers)
-resp = res.json()["blueprints"]
+blueprints = res.json()["blueprints"]
+failed_blueprints = []
 
-for blueprint in resp:
+for blueprint in blueprints:
     if blueprint["identifier"] not in systemBlueprints:
-        print(f"deleting entities of blueprint {blueprint['identifier']}")
+        print(f"Deleting entities of blueprint {blueprint['identifier']}")
         res = requests.delete(f'{API_URL}/blueprints/{blueprint["identifier"]}/all-entities', headers=headers)
-        if res.ok != True:
-            print("error while deleting entities: "+ json.dumps(res.json()))
-        print(f"deleting blueprint {blueprint['identifier']}")
+        if not res.ok:
+            print(f"Error while deleting entities: {json.dumps(res.json())}")
+            failed_blueprints.append(blueprint["identifier"])
+            continue
+
+        print(f"Deleting blueprint {blueprint['identifier']}")
         res = requests.delete(f'{API_URL}/blueprints/{blueprint["identifier"]}', headers=headers)
-        if res.ok != True:
-            print("error while deleting blueprint: "+ json.dumps(res.json()))
+        if not res.ok:
+            print(f"Error while deleting blueprint: {json.dumps(res.json())}")
+            failed_blueprints.append(blueprint["identifier"])
+
+    return failed_blueprints
+
+for attempt in range(5):
+    if not failed_blueprints:
+        break
+
+    print(f"Retrying deletion... Attempt {attempt + 1}")
+    remaining_failed = []
+
+    for identifier in failed_blueprints:
+        print(f"Retrying deletion of blueprint {identifier}")
+        res = requests.delete(f'{API_URL}/blueprints/{identifier}/all-entities', headers=headers)
+        if not res.ok:
+            print(f"Error while deleting entities: {json.dumps(res.json())}")
+            remaining_failed.append(identifier)
+            continue
+
+        res = requests.delete(f'{API_URL}/blueprints/{identifier}', headers=headers)
+        if not res.ok:
+            print(f"Error while deleting blueprint: {json.dumps(res.json())}")
+            remaining_failed.append(identifier)
+
+    failed_blueprints = remaining_failed
+    if failed_blueprints:
+        print(f"Some deletions still failed. Retrying in 5 seconds...")
+        time.sleep(5)
+
+if failed_blueprints:
+    print(f"Failed to delete the following blueprints after {retries} attempts: {failed_blueprints}")
+else:
+    print("All blueprints deleted successfully.")
+
 
 print("Getting teams")
 res = requests.get(f'{API_URL}/teams', headers=headers)
