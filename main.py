@@ -49,7 +49,7 @@ if PORT_OLD_CLIENT_ID != "" or PORT_OLD_CLIENT_SECRET != "":
 if PORT_NEW_CLIENT_ID != "" or PORT_NEW_CLIENT_SECRET != "":
     global new_headers
     new_credentials = { 'clientId': PORT_NEW_CLIENT_ID, 'clientSecret': PORT_NEW_CLIENT_SECRET }
-    new_credentials = requests.post(f'{US_API_URL}/auth/access_token', json=new_credentials)
+    new_credentials = requests.post(f'{API_URL}/auth/access_token', json=new_credentials)
     new_access_token = new_credentials.json()["accessToken"]
     new_headers = {
         'Authorization': f'Bearer {new_access_token}'
@@ -57,7 +57,7 @@ if PORT_NEW_CLIENT_ID != "" or PORT_NEW_CLIENT_SECRET != "":
 
 def getNewToken():
     global new_headers
-    new_credentials = requests.post(f'{US_API_URL}/auth/access_token', json=new_credentials)
+    new_credentials = requests.post(f'{API_URL}/auth/access_token', json=new_credentials)
     new_access_token = new_credentials.json()["accessToken"]
     new_headers = {
         'Authorization': f'Bearer {new_access_token}'
@@ -134,7 +134,7 @@ def postBlueprints(blueprints):
         bp["aggregationProperties"] = {}
         bp["relations"] = {}
         bp["mirrorProperties"] = {}
-        res = requests.post(f'{US_API_URL}/blueprints?create_catalog_page=false', headers=new_headers, json=bp)
+        res = requests.post(f'{API_URL}/blueprints?create_catalog_page=false', headers=new_headers, json=bp)
         if res.ok != True:
             print("error posting blueprint:" + json.dumps(res.json()))
             error = True
@@ -144,13 +144,13 @@ def postBlueprints(blueprints):
             blueprint.pop("teamInheritance", None)
         blueprint["aggregationProperties"] = {} 
         blueprint["mirrorProperties"] = {}
-        res = requests.patch(f'{US_API_URL}/blueprints/{blueprint["identifier"]}', headers=new_headers, json=blueprint)
+        res = requests.patch(f'{API_URL}/blueprints/{blueprint["identifier"]}', headers=new_headers, json=blueprint)
         if res.ok != True:
             print("error patching blueprint:" + json.dumps(res.json()))
             error = True
     for blueprint in blueprints:       # send blueprint with everything
         print(f"patching blueprint {blueprint['identifier']} with mirror properties")
-        res = requests.patch(f'{US_API_URL}/blueprints/{blueprint["identifier"]}', headers=new_headers, json=blueprint)
+        res = requests.patch(f'{API_URL}/blueprints/{blueprint["identifier"]}', headers=new_headers, json=blueprint)
         if res.ok != True:
             print("error patching blueprint:" + json.dumps(res.json()))
             error = True
@@ -160,7 +160,7 @@ def postPages(pages, sidebar):
         if catalog_item['sidebarType'] == 'page': #catalog_item is a page
             pageToPost = next((page for page in pages if page['identifier'] == catalog_item['identifier']), None)
             print(f"posting page {catalog_item['identifier']}")
-            res = requests.post(f'{US_API_URL}/pages', headers=new_headers, json=pageToPost)
+            res = requests.post(f'{API_URL}/pages', headers=new_headers, json=pageToPost)
             if res.ok != True:
                 print("error posting page:" + json.dumps(res.json()))
                 error = True
@@ -173,7 +173,7 @@ def postPages(pages, sidebar):
             catalog_item.pop("_id", None)
             catalog_item.pop("sidebar", None)
             catalog_item.pop("sidebarType", None)
-            res = requests.post(f'{US_API_URL}/sidebars/catalog/folders', headers=new_headers, json=catalog_item)
+            res = requests.post(f'{API_URL}/sidebars/catalog/folders', headers=new_headers, json=catalog_item)
             if res.ok != True:
                 print("error posting catalog item:" + json.dumps(res.json()))
                 error = True
@@ -239,7 +239,7 @@ def postScorecards(scorecards):
         scorecard.pop("createdBy", None)
         scorecard.pop("updatedBy", None)
         blueprint = scorecard.pop("blueprint", None)
-        res = requests.post(f'{US_API_URL}/blueprints/{blueprint}/scorecards', headers=new_headers, json=scorecard)
+        res = requests.post(f'{API_URL}/blueprints/{blueprint}/scorecards', headers=new_headers, json=scorecard)
         if res.ok != True:
             print(f"error posting scorecard:" + json.dumps(res.json()))
             error = True
@@ -260,7 +260,7 @@ def postActions(actions):
         action.pop("createdBy", None)
         action.pop("updatedBy", None)
         action.pop("id", None)
-        res = requests.post(f'{US_API_URL}/actions', headers=new_headers, json=action)
+        res = requests.post(f'{API_URL}/actions', headers=new_headers, json=action)
         if res.ok != True:
             print(f"error posting action: " + json.dumps(res.json()))
             teamError = True
@@ -285,7 +285,7 @@ def postTeams(teams):
     for team in teams:
         if pd.isna(team.get("description", "")): # check if description is NaN
             team["description"] = "" # set description to empty string
-        res = requests.post(f'{US_API_URL}/teams', headers=new_headers, json=team)
+        res = requests.post(f'{API_URL}/teams', headers=new_headers, json=team)
         if res.ok != True:
             print(f"error posting team {team['name']} :" + json.dumps(res.json()))
             error = True
